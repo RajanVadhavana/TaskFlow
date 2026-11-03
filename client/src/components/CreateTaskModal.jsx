@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTaskStore } from "../store/useTaskStore.js";
 import { COLUMNS, COLUMN_ORDER, COLUMN_LABELS, PRIORITIES } from "../utils/constants.js";
 import Modal from "./ui/Modal.jsx";
+import Button from "./ui/Button.jsx";
 
 /**
  * Form for creating a new task.  Controlled inputs, no external form library
@@ -145,19 +146,24 @@ export default function CreateTaskModal({ onClose }) {
           />
         </div>
 
-        {/* Actions */}
+        {/* Actions — use Button component so styles come from design tokens */}
         <div className="flex justify-end gap-2 pt-1">
-          <button id="create-cancel-btn" type="button" className="btn-ghost" onClick={onClose}>
+          <Button
+            id="create-cancel-btn"
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+          >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             id="create-submit-btn"
             type="submit"
-            className="btn-primary"
+            variant="primary"
             disabled={submitting}
           >
             {submitting ? "Creating…" : "Create Task"}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

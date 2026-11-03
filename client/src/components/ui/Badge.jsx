@@ -24,3 +24,4 @@ export default function Badge({ className = "", children }) {
     </span>
   );
 }
+

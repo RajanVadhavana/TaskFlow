@@ -7,7 +7,7 @@
     "dev": "nodemon src/server.js",
     "start": "node src/server.js",
     "seed": "node src/seed/seed.js",
-    "free": "FOR /F \"tokens=5\" %P IN ('netstat -aon ^| findstr :8000') DO taskkill /F /PID %P"
+    "free": "FOR /F \"tokens=5\" %P IN ('netstat -aon ^| findstr :5173') DO taskkill /F /PID %P"
   },
   "dependencies": {
     "cors": "^2.8.5",
