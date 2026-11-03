@@ -1,14 +1,16 @@
 import { useState } from "react";
-import Navbar from "./Navbar.jsx";
-import { COLUMN_ORDER, COLUMN_LABELS } from "../utils/constants.js";
+import { useColumns } from "../hooks/useColumns.js";
+import Navbar from "../components/Navbar.jsx";
+import KanbanColumn from "../components/KanbanColumn.jsx";
+import CreateTaskModal from "../components/CreateTaskModal.jsx";
 
-/**
- * Commit 8: Static presentation layout for verifying responsive columns and navbar.
- */
 export default function BoardPage() {
+  const { columns, loading, error } = useColumns();
+  const [showCreate, setShowCreate] = useState(false);
+
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
-      <Navbar onNewTask={() => {}} />
+      <Navbar onNewTask={() => setShowCreate(true)} />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         <div className="mb-6">
@@ -20,26 +22,31 @@ export default function BoardPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {COLUMN_ORDER.map((colId) => (
-            <section key={colId} className="flex flex-col gap-3 w-full">
-              <div className="flex items-center justify-between px-1">
-                <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-300 tracking-wide uppercase">
-                  {COLUMN_LABELS[colId]}
-                </h2>
-                <span className="text-xs bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-full px-2 py-0.5 font-medium">
-                  0
-                </span>
-              </div>
-              <div className="column">
-                <p className="text-xs text-slate-400 dark:text-slate-600 text-center py-8">
-                  No tasks yet
-                </p>
-              </div>
-            </section>
-          ))}
-        </div>
+        {loading && (
+          <div className="flex items-center justify-center py-24">
+            <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        )}
+
+        {error && !loading && (
+          <div className="text-center py-16 text-rose-500">
+            <p className="font-medium">Could not load tasks</p>
+            <p className="text-sm mt-1 text-slate-500">{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {columns.map((col) => (
+              <KanbanColumn key={col.id} id={col.id} tasks={col.tasks} />
+            ))}
+          </div>
+        )}
       </main>
+
+      {showCreate && (
+        <CreateTaskModal onClose={() => setShowCreate(false)} />
+      )}
     </div>
   );
 }
