@@ -2,14 +2,71 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
-  background-color: #f8fafc;
-  color: #0f172a;
+/* Base layer — global tokens */
+@layer base {
+  :root {
+    color-scheme: light dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    @apply dark:bg-slate-950 dark:text-slate-100;
+    scrollbar-gutter: stable;
+  }
+
+  ::-webkit-scrollbar {
+    @apply w-1.5;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full dark:bg-slate-700;
+  }
 }
 
-.dark body {
-  background-color: #020617;
-  color: #f8fafc;
+/* Component layer — reusable class shortcuts */
+@layer components {
+  .card {
+    @apply bg-white border border-slate-200 rounded-xl shadow-card;
+    @apply dark:bg-slate-900 dark:border-slate-800;
+    @apply transition-shadow duration-150;
+  }
+
+  .card:hover {
+    @apply shadow-card-hover;
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm;
+    @apply bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800;
+    @apply transition-colors duration-150 focus-visible:outline-none;
+    @apply focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2;
+    @apply dark:focus-visible:ring-offset-slate-950;
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm;
+    @apply text-slate-600 hover:bg-slate-100 active:bg-slate-200;
+    @apply dark:text-slate-400 dark:hover:bg-slate-800 dark:active:bg-slate-700;
+    @apply transition-colors duration-150 focus-visible:outline-none;
+    @apply focus-visible:ring-2 focus-visible:ring-indigo-500;
+  }
+
+  .input {
+    @apply w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white;
+    @apply placeholder:text-slate-400 dark:bg-slate-900 dark:border-slate-700;
+    @apply dark:placeholder:text-slate-600 dark:text-slate-100;
+    @apply focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent;
+    @apply transition-shadow duration-150;
+  }
+
+  .column {
+    @apply flex flex-col gap-2 p-3 rounded-2xl min-h-[200px];
+    @apply bg-slate-100 dark:bg-slate-900/60;
+  }
 }
