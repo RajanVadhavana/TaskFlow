@@ -23,6 +23,17 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+// Chaos simulation middleware for DevTools — responds with 500 when client requests failure
+app.use((req, res, next) => {
+  if (req.headers["x-simulate-failure"] === "true") {
+    return res.status(500).json({
+      error: "Simulated 500 server failure (DevTools)",
+      code: "SIMULATED_FAILURE",
+    });
+  }
+  next();
+});
+
 app.use("/api/tasks", taskRoutes);
 app.use("/api/activity", activityRoutes);
 

@@ -17,12 +17,12 @@ export class ApiError extends Error {
 }
 
 /**
- * simulation — toggled by the Step 6 chaos panel.
+ * simulation — toggled by the DevTools chaos panel.
  *
  * Exported as a mutable plain object so the chaos panel can flip its fields
  * in place (e.g. simulation.failure = true) without a setter or re-render.
  *
- *   failure  : boolean  – attach X-Simulate-Failure so the server returns 500
+ *   failure  : boolean  – simulate 500 failure on mutations to test rollback
  *   latencyMs: number   – add artificial delay before the request fires
  */
 export const simulation = {
@@ -40,12 +40,18 @@ export const simulation = {
 async function request(method, path, body) {
   const headers = { "Content-Type": "application/json" };
 
-  // Chaos headers — Step 6 toggles these via the simulation object.
+  // Chaos headers — DevTools toggles these via the simulation object.
   if (simulation.failure) headers["X-Simulate-Failure"] = "true";
   if (simulation.latencyMs > 0) {
     headers["X-Simulate-Latency"] = String(simulation.latencyMs);
     // Also delay client-side so spinners are visible even without server support.
     await new Promise((r) => setTimeout(r, simulation.latencyMs));
+  }
+
+  // If simulation failure is enabled, simulate a 500 server error on mutations
+  // (e.g. moving a card) so the UI optimistic rollback triggers deterministically.
+  if (simulation.failure && method !== "GET") {
+    throw new ApiError(500, "SIMULATED_FAILURE", "Simulated 500 server failure");
   }
 
   const options = { method, headers };
