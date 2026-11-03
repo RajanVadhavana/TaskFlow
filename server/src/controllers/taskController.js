@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { getBottomIndex, maybeRebalance } from "../utils/rebalance.js";
 import { Task } from "../models/Task.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -43,4 +44,32 @@ export const deleteTask = asyncHandler(async (req, res) => {
   const task = await Task.findByIdAndDelete(req.params.id).lean();
   if (!task) return res.status(404).json({ error: "Task not found." });
   res.status(204).end();
+});
+
+// PATCH /api/tasks/:id/move
+export const moveTask = asyncHandler(async (req, res) => {
+  const { columnId, orderIndex, version } = req.body;
+  const { id } = req.params;
+
+  // Atomic optimistic concurrency check
+  const updated = await Task.findOneAndUpdate(
+    { _id: id, version },
+    { $set: { columnId, orderIndex }, $inc: { version: 1 } },
+    { new: true }
+  );
+
+  if (!updated) {
+    const exists = await Task.findById(id).lean();
+    if (!exists) {
+      return res.status(404).json({ error: "Task not found." });
+    }
+    return res.status(409).json({
+      code: "STALE_VERSION",
+      error: "Task was modified by another request. Refresh and retry.",
+      task: exists,
+    });
+  }
+
+  const rebalanceResult = await maybeRebalance(columnId);
+  res.json({ task: updated, ...rebalanceResult });
 });
