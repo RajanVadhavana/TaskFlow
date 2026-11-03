@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -13,12 +13,14 @@ import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { AlertCircle, RefreshCw } from "lucide-react";
 import { useColumns } from "../hooks/useColumns.js";
 import { useBoardStore, getAllTasks } from "../store/useBoardStore.js";
+import { useActivity } from "../hooks/useActivity.js";
 import { COLUMN_ORDER } from "../utils/constants.js";
 import { computeOrderIndex } from "../utils/order.js";
 import Navbar from "../components/Navbar.jsx";
 import KanbanColumn from "../components/KanbanColumn.jsx";
 import TaskCard from "../components/TaskCard.jsx";
 import TaskModal from "../components/TaskModal.jsx";
+import ActivityDrawer from "../components/ActivityDrawer.jsx";
 import Skeleton from "../components/ui/Skeleton.jsx";
 import Button from "../components/ui/Button.jsx";
 
@@ -83,6 +85,7 @@ function SkeletonBoard() {
  * - 3 equal columns on desktop, horizontal scroll-snap on mobile (< 768px)
  * - Skeleton loading state and error banner with retry
  * - Drag and Drop wired via @dnd-kit
+ * - Activity drawer wired to Bell button in Navbar
  */
 export default function BoardPage() {
   const { columns, loading, error, refetch } = useColumns();
@@ -92,6 +95,43 @@ export default function BoardPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [activeTask, setActiveTask] = useState(null);
 
+  // ── Activity drawer state ─────────────────────────────────────────────────
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const {
+    activities,
+    nextCursor,
+    loading: activityLoading,
+    error: activityError,
+    hasUnread,
+    fetchActivity,
+    loadMore,
+    markSeen,
+    notifyUnread,
+  } = useActivity();
+
+  // Called when the Bell button is clicked: open drawer, clear unread dot,
+  // and re-fetch so the list is always fresh on open.
+  const handleOpenActivity = useCallback(() => {
+    setDrawerOpen(true);
+    markSeen();
+    fetchActivity();
+  }, [markSeen, fetchActivity]);
+
+  /**
+   * afterMutation — called after every successful create/update/delete/move.
+   *
+   * If the drawer is open: refetch the activity list so the new entry appears.
+   * If the drawer is closed: light up the unread dot on the Bell button.
+   */
+  const afterMutation = useCallback(() => {
+    if (drawerOpen) {
+      fetchActivity();
+    } else {
+      notifyUnread();
+    }
+  }, [drawerOpen, fetchActivity, notifyUnread]);
+
+  // ── DnD kit sensors ───────────────────────────────────────────────────────
   // Require moving 8px before activating drag so normal clicks aren't intercepted
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -175,13 +215,15 @@ export default function BoardPage() {
     }
 
     await moveTask(activeId, targetColumnId, newOrderIndex);
+    afterMutation();
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-[color:var(--color-bg)]">
       <Navbar
         onNewTask={() => setShowCreate(true)}
-        onActivity={() => {}}
+        onActivity={handleOpenActivity}
+        hasUnread={hasUnread}
       />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
@@ -234,7 +276,11 @@ export default function BoardPage() {
             <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto snap-x snap-mandatory pb-4 md:pb-0 -mx-4 px-4 md:mx-0 md:px-0">
               {columns.map((col) => (
                 <div key={col.id} className="snap-center shrink-0 w-[85vw] md:w-auto">
-                  <KanbanColumn id={col.id} tasks={col.tasks} />
+                  <KanbanColumn
+                    id={col.id}
+                    tasks={col.tasks}
+                    onMutation={afterMutation}
+                  />
                 </div>
               ))}
             </div>
@@ -253,8 +299,23 @@ export default function BoardPage() {
 
       {/* Task modal for creation from navbar */}
       {showCreate && (
-        <TaskModal onClose={() => setShowCreate(false)} />
+        <TaskModal
+          onClose={() => setShowCreate(false)}
+          onSuccess={afterMutation}
+        />
       )}
+
+      {/* Activity drawer — portal rendered, always mounted for animation */}
+      <ActivityDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
+        activities={activities}
+        nextCursor={nextCursor}
+        loading={activityLoading}
+        error={activityError}
+        onLoadMore={loadMore}
+        onRetry={fetchActivity}
+      />
     </div>
   );
 }

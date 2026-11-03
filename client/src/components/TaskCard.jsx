@@ -20,8 +20,14 @@ import TaskModal from "./TaskModal.jsx";
  *
  * Fully keyboard-accessible: arrow keys navigate, Enter/Space activate,
  * Escape closes.  Each item has role="menuitem" inside role="menu".
+ *
+ * Props:
+ *   task        : Task
+ *   columnTasks : Task[] – all tasks in this card's column (sorted)
+ *   onClose     : () => void
+ *   onMutation  : () => void  – called after a successful move
  */
-function KebabMenu({ task, columnTasks, onClose }) {
+function KebabMenu({ task, columnTasks, onClose, onMutation }) {
   const menuRef = useRef(null);
   const moveTask = useBoardStore((s) => s.moveTask);
 
@@ -42,6 +48,7 @@ function KebabMenu({ task, columnTasks, onClose }) {
     // "Up" means targetIndex = myIndex - 1 in the list without this card
     const newOrderIndex = computeOrderIndex(tasksWithoutMe, myIndex - 1);
     moveTask(task._id, task.columnId, newOrderIndex);
+    onMutation?.();
     onClose();
   }
 
@@ -49,6 +56,7 @@ function KebabMenu({ task, columnTasks, onClose }) {
     // "Down" means targetIndex = myIndex + 1 in the list without this card
     const newOrderIndex = computeOrderIndex(tasksWithoutMe, myIndex + 1);
     moveTask(task._id, task.columnId, newOrderIndex);
+    onMutation?.();
     onClose();
   }
 
@@ -59,6 +67,7 @@ function KebabMenu({ task, columnTasks, onClose }) {
     // Place at the bottom of the target column
     const newOrderIndex = computeOrderIndex(targetTasks, targetTasks.length);
     moveTask(task._id, colId, newOrderIndex);
+    onMutation?.();
     onClose();
   }
 
@@ -166,8 +175,15 @@ function KebabMenu({ task, columnTasks, onClose }) {
  * Wrapped in React.memo — only re-renders when the task prop reference
  * changes.  The parent (KanbanColumn) derives tasks with getColumnTasks
  * which only returns a new array when the column's data actually changes.
+ *
+ * Props:
+ *   task        : Task
+ *   columnTasks : Task[]    – sibling tasks in same column (for kebab menu)
+ *   isDragOverlay : boolean – true when rendered inside DragOverlay
+ *   onMutation  : () => void  – called after edit/delete/move so BoardPage
+ *                               can update the activity unread dot
  */
-function TaskCard({ task, columnTasks = [], isDragOverlay = false }) {
+function TaskCard({ task, columnTasks = [], isDragOverlay = false, onMutation }) {
   const deleteTask = useBoardStore((s) => s.deleteTask);
 
   const [showEdit, setShowEdit]       = useState(false);
@@ -196,6 +212,7 @@ function TaskCard({ task, columnTasks = [], isDragOverlay = false }) {
     setDeleting(true);
     try {
       await deleteTask(task._id);
+      onMutation?.();
     } finally {
       setDeleting(false);
       setShowConfirm(false);
@@ -296,6 +313,7 @@ function TaskCard({ task, columnTasks = [], isDragOverlay = false }) {
                   task={task}
                   columnTasks={columnTasks}
                   onClose={() => setShowMenu(false)}
+                  onMutation={onMutation}
                 />
               )}
             </div>
@@ -338,7 +356,13 @@ function TaskCard({ task, columnTasks = [], isDragOverlay = false }) {
       </div>
 
       {/* ── Modals ───────────────────────────────────────────────────────── */}
-      {showEdit && <TaskModal task={task} onClose={() => setShowEdit(false)} />}
+      {showEdit && (
+        <TaskModal
+          task={task}
+          onClose={() => setShowEdit(false)}
+          onSuccess={onMutation}
+        />
+      )}
 
       {showConfirm && (
         <ConfirmDialog

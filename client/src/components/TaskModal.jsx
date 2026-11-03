@@ -18,8 +18,14 @@ import Button from "./ui/Button.jsx";
  *   task            : Task object (optional, for edit mode)
  *   defaultColumnId : string (optional, defaults to COLUMNS.TODO)
  *   onClose         : () => void
+ *   onSuccess       : () => void (optional, invoked after successful create or edit)
  */
-export default function TaskModal({ task = null, defaultColumnId = COLUMNS.TODO, onClose }) {
+export default function TaskModal({
+  task = null,
+  defaultColumnId = COLUMNS.TODO,
+  onClose,
+  onSuccess,
+}) {
   const isEditing = Boolean(task);
   const createTask = useBoardStore((s) => s.createTask);
   const updateTask = useBoardStore((s) => s.updateTask);
@@ -73,6 +79,7 @@ export default function TaskModal({ task = null, defaultColumnId = COLUMNS.TODO,
           tags,
         });
       }
+      onSuccess?.();
       onClose();
     } catch {
       // Toast is already triggered by store action
@@ -219,4 +226,3 @@ export default function TaskModal({ task = null, defaultColumnId = COLUMNS.TODO,
     </Modal>
   );
 }
-
