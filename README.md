@@ -2,10 +2,11 @@
 
 A resilient, MERN-stack Kanban board with optimistic drag-and-drop, concurrency guards, an audit/activity log, and a built-in chaos-testing panel.
 
-> **Screenshot placeholders** — replace these after taking screenshots in your browser.
->
-> ![Board light mode](./docs/screenshot-light.png)
-> ![Board dark mode](./docs/screenshot-dark.png)
+### Light Mode
+![Board light mode](./docs/screenshot-light.png)
+
+### Dark Mode
+![Board dark mode](./docs/screenshot-dark.png)
 
 ---
 
