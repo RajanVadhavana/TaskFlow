@@ -111,8 +111,12 @@ export default function BoardPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950">
-      <Navbar onNewTask={() => setShowCreate(true)} />
+    <div className="min-h-screen flex flex-col bg-[color:var(--color-bg)]">
+      {/* onActivity is a placeholder — the activity drawer is a future step */}
+      <Navbar
+        onNewTask={() => setShowCreate(true)}
+        onActivity={() => {}}
+      />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         {/* Title */}

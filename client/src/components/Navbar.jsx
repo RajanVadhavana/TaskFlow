@@ -1,57 +1,83 @@
-import { Sun, Moon, Plus, Kanban } from "lucide-react";
-import React, { useState, useEffect } from "react";
+import React from "react";
+import { Sun, Moon, Kanban, Bell, Plus } from "lucide-react";
+import { useTheme } from "../hooks/useTheme.js";
+import IconButton from "./ui/IconButton.jsx";
+import Button from "./ui/Button.jsx";
 
 /**
- * Top navigation bar.
- * Theme toggle works by adding/removing the "dark" class on <html>.
- * We read the initial state from the class that was set in index.html.
+ * Header / Navbar
+ *
+ * Sticky top bar with:
+ *  - Logo mark + "TaskFlow" wordmark + subtitle
+ *  - Placeholder Activity button (will open Activity drawer in a later step)
+ *  - Theme toggle (sun/moon) powered by useTheme
+ *  - "New Task" primary action button
+ *
+ * Props:
+ *   onNewTask    : () => void  – opens the create modal
+ *   onActivity   : () => void  – (placeholder) opens the activity panel
  */
-export default function Navbar({ onNewTask }) {
-  const [dark, setDark] = useState(
-    () => document.documentElement.classList.contains("dark")
-  );
-
-  useEffect(() => {
-    // Sync the <html> class when the local state changes.
-    if (dark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [dark]);
+export default function Navbar({ onNewTask, onActivity }) {
+  const { isDark, toggle } = useTheme();
 
   return (
-    <header className="sticky top-0 z-40 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
-      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
-        {/* Brand */}
-        <div className="flex items-center gap-2">
-          <Kanban size={20} className="text-indigo-500" aria-hidden />
-          <span className="font-semibold text-slate-900 dark:text-slate-100 text-base tracking-tight">
-            TaskFlow
-          </span>
+    <header
+      className="
+        sticky top-0 z-40
+        border-b border-[color:var(--color-border)]
+        bg-[color:var(--color-surface)]/80 backdrop-blur-md
+      "
+    >
+      <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+
+        {/* ── Brand ─────────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2.5 min-w-0">
+          {/* Logo mark: indigo kanban icon */}
+          <div
+            className="
+              w-7 h-7 rounded-lg flex items-center justify-center
+              bg-[color:var(--color-accent)]
+            "
+            aria-hidden
+          >
+            <Kanban size={15} className="text-white" />
+          </div>
+
+          <div className="flex flex-col leading-tight min-w-0">
+            <span className="font-semibold text-sm text-[color:var(--color-text)] tracking-tight">
+              TaskFlow
+            </span>
+            {/* Subtitle hidden below 480 px so the header fits on small screens */}
+            <span className="hidden sm:block text-xs text-[color:var(--color-text-muted)]">
+              Kanban board
+            </span>
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2">
-          {/* Theme toggle */}
-          <button
-            id="theme-toggle-btn"
-            onClick={() => setDark((d) => !d)}
-            className="btn-ghost p-2"
-            aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
+        {/* ── Actions ───────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-1.5">
+
+          {/* Activity log — placeholder; will be wired up later */}
+          <IconButton
+            aria-label="View activity log"
+            onClick={onActivity}
           >
-            {dark ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+            <Bell size={17} />
+          </IconButton>
+
+          {/* Theme toggle */}
+          <IconButton
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            onClick={toggle}
+          >
+            {isDark ? <Sun size={17} /> : <Moon size={17} />}
+          </IconButton>
 
           {/* New task */}
-          <button
-            id="new-task-btn"
-            onClick={onNewTask}
-            className="btn-primary"
-          >
-            <Plus size={16} aria-hidden />
+          <Button variant="primary" size="sm" onClick={onNewTask}>
+            <Plus size={15} aria-hidden />
             New Task
-          </button>
+          </Button>
         </div>
       </div>
     </header>
