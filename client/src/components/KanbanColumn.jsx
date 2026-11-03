@@ -88,7 +88,7 @@ export default function KanbanColumn({ id, tasks }) {
         >
           <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
             {tasks.map((task) => (
-              <TaskCard key={task._id} task={task} />
+              <TaskCard key={task._id} task={task} columnTasks={tasks} />
             ))}
           </SortableContext>
 

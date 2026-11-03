@@ -3,19 +3,21 @@ import { Sun, Moon, Kanban, Bell, Plus } from "lucide-react";
 import { useTheme } from "../hooks/useTheme.js";
 import IconButton from "./ui/IconButton.jsx";
 import Button from "./ui/Button.jsx";
+import DevToolsPopover from "./ui/DevToolsPopover.jsx";
 
 /**
  * Header / Navbar
  *
  * Sticky top bar with:
  *  - Logo mark + "TaskFlow" wordmark + subtitle
+ *  - DevTools popover (Sliders icon) — chaos simulation toggles
  *  - Placeholder Activity button (will open Activity drawer in a later step)
  *  - Theme toggle (sun/moon) powered by useTheme
  *  - "New Task" primary action button
  *
  * Props:
- *   onNewTask    : () => void  – opens the create modal
- *   onActivity   : () => void  – (placeholder) opens the activity panel
+ *   onNewTask  : () => void  – opens the create modal
+ *   onActivity : () => void  – (placeholder) opens the activity panel
  */
 export default function Navbar({ onNewTask, onActivity }) {
   const { isDark, toggle } = useTheme();
@@ -30,7 +32,7 @@ export default function Navbar({ onNewTask, onActivity }) {
     >
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
 
-        {/* ── Brand ─────────────────────────────────────────────────────── */}
+        {/* ── Brand ──────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Logo mark: indigo kanban icon */}
           <div
@@ -47,17 +49,20 @@ export default function Navbar({ onNewTask, onActivity }) {
             <span className="font-semibold text-sm text-[color:var(--color-text)] tracking-tight">
               TaskFlow
             </span>
-            {/* Subtitle hidden below 480 px so the header fits on small screens */}
+            {/* Subtitle hidden below 480px so the header fits on small screens */}
             <span className="hidden sm:block text-xs text-[color:var(--color-text-muted)]">
               Kanban board
             </span>
           </div>
         </div>
 
-        {/* ── Actions ───────────────────────────────────────────────────── */}
+        {/* ── Actions ────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-1.5">
 
-          {/* Activity log — placeholder; will be wired up later */}
+          {/* Dev tools — simulation / chaos panel */}
+          <DevToolsPopover />
+
+          {/* Activity log — placeholder; will be wired up in a later step */}
           <IconButton
             aria-label="View activity log"
             onClick={onActivity}

@@ -116,3 +116,26 @@
     background-color: color-mix(in srgb, var(--color-surface) 60%, var(--color-bg));
   }
 }
+
+/* ── Card move state animations ──────────────────────────────────────────────
+   card-shake: plays when a move is rolled back so the user sees a clear
+   "no" signal. Only fires when prefers-reduced-motion: no-preference.
+   The @keyframes is defined outside @layer so it is globally available.
+*/
+@keyframes card-shake {
+  0%   { transform: translateX(0); }
+  18%  { transform: translateX(-6px); }
+  36%  { transform: translateX(6px); }
+  54%  { transform: translateX(-4px); }
+  72%  { transform: translateX(4px); }
+  88%  { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+@layer utilities {
+  /* motion-safe:animate-card-shake — Tailwind JIT picks up arbitrary values
+     but does not include custom keyframes by default, so we register it here. */
+  .animate-card-shake {
+    animation: card-shake 0.6s ease-in-out;
+  }
+}
