@@ -1,18 +1,54 @@
 // Base URL comes from .env so we can point at staging/production without
 // changing code. Falls back to localhost for convenience during development.
-const BASE = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
+const BASE = (typeof import.meta !== "undefined" && import.meta.env?.VITE_API_URL) || "http://localhost:8000/api";
+
+/**
+ * Custom ApiError class holding status code, server error code,
+ * message, and any server task payload (e.g. on 409 STALE_VERSION).
+ */
+export class ApiError extends Error {
+  constructor(status, code, message, serverTask = null) {
+    super(message || "Request failed");
+    this.name = "ApiError";
+    this.status = status;
+    this.code = code;
+    this.serverTask = serverTask;
+  }
+}
+
+/**
+ * simulation — toggled by the Step 6 chaos panel.
+ *
+ * Exported as a mutable plain object so the chaos panel can flip its fields
+ * in place (e.g. simulation.failure = true) without a setter or re-render.
+ *
+ *   failure  : boolean  – attach X-Simulate-Failure so the server returns 500
+ *   latencyMs: number   – add artificial delay before the request fires
+ */
+export const simulation = {
+  failure: false,
+  latencyMs: 0,
+};
 
 /**
  * Thin wrapper around fetch that:
  *  - Sets Content-Type to JSON for non-GET requests.
- *  - Throws a plain Error with the server's `error` field as the message.
+ *  - Attaches simulation headers when chaos mode is active.
+ *  - Throws an ApiError {status, code, message} for non-2xx responses.
  *  - Returns parsed JSON on success.
  */
 async function request(method, path, body) {
-  const options = {
-    method,
-    headers: { "Content-Type": "application/json" },
-  };
+  const headers = { "Content-Type": "application/json" };
+
+  // Chaos headers — Step 6 toggles these via the simulation object.
+  if (simulation.failure) headers["X-Simulate-Failure"] = "true";
+  if (simulation.latencyMs > 0) {
+    headers["X-Simulate-Latency"] = String(simulation.latencyMs);
+    // Also delay client-side so spinners are visible even without server support.
+    await new Promise((r) => setTimeout(r, simulation.latencyMs));
+  }
+
+  const options = { method, headers };
 
   if (body !== undefined) {
     options.body = JSON.stringify(body);
@@ -23,14 +59,10 @@ async function request(method, path, body) {
   // 204 No Content (DELETE) has no body — return null.
   if (res.status === 204) return null;
 
-  const data = await res.json();
+  const data = await res.json().catch(() => ({}));
 
   if (!res.ok) {
-    const err = new Error(data.error || "Request failed");
-    err.status = res.status;
-    err.code = data.code;    // e.g. "STALE_VERSION"
-    err.serverTask = data.task; // latest task state sent back on 409
-    throw err;
+    throw new ApiError(res.status, data.code, data.error, data.task);
   }
 
   return data;
