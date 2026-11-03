@@ -2,6 +2,9 @@
 
 A resilient, MERN-stack Kanban board with optimistic drag-and-drop, concurrency guards, an audit/activity log, and a built-in chaos-testing panel.
 
+🔗 **Live Demo**: [https://task-flow-lake-one.vercel.app](https://task-flow-lake-one.vercel.app/)  
+⚡ **Backend API**: [https://taskflow-1yvj.onrender.com/api](https://taskflow-1yvj.onrender.com/api)
+
 ### Light Mode
 ![Board light mode](./docs/screenshot-light.png)
 
