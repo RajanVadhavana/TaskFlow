@@ -11,15 +11,17 @@ import DevToolsPopover from "./ui/DevToolsPopover.jsx";
  * Sticky top bar with:
  *  - Logo mark + "TaskFlow" wordmark + subtitle
  *  - DevTools popover (Sliders icon) — chaos simulation toggles
- *  - Placeholder Activity button (will open Activity drawer in a later step)
+ *  - Bell button that opens the Activity drawer.
+ *    Shows a small indigo dot when hasUnread=true (new activity while closed).
  *  - Theme toggle (sun/moon) powered by useTheme
  *  - "New Task" primary action button
  *
  * Props:
  *   onNewTask  : () => void  – opens the create modal
- *   onActivity : () => void  – (placeholder) opens the activity panel
+ *   onActivity : () => void  – opens the activity drawer
+ *   hasUnread  : boolean     – shows unread dot on Bell when true
  */
-export default function Navbar({ onNewTask, onActivity }) {
+export default function Navbar({ onNewTask, onActivity, hasUnread = false }) {
   const { isDark, toggle } = useTheme();
 
   return (
@@ -32,7 +34,7 @@ export default function Navbar({ onNewTask, onActivity }) {
     >
       <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
 
-        {/* ── Brand ──────────────────────────────────────────────────────── */}
+        {/* ── Brand ──────────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-2.5 min-w-0">
           {/* Logo mark: indigo kanban icon */}
           <div
@@ -56,19 +58,35 @@ export default function Navbar({ onNewTask, onActivity }) {
           </div>
         </div>
 
-        {/* ── Actions ────────────────────────────────────────────────────── */}
+        {/* ── Actions ────────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-1.5">
 
           {/* Dev tools — simulation / chaos panel */}
           <DevToolsPopover />
 
-          {/* Activity log — placeholder; will be wired up in a later step */}
-          <IconButton
-            aria-label="View activity log"
-            onClick={onActivity}
-          >
-            <Bell size={17} />
-          </IconButton>
+          {/* Activity Bell — dot indicates new activity while drawer was closed */}
+          <div className="relative">
+            <IconButton
+              aria-label="View activity log"
+              onClick={onActivity}
+            >
+              <Bell size={17} />
+            </IconButton>
+
+            {/* Unread dot: small indigo circle, hidden when hasUnread is false.
+                Uses aria-hidden because the label on the button is sufficient. */}
+            {hasUnread && (
+              <span
+                aria-hidden
+                className="
+                  absolute top-0.5 right-0.5
+                  w-2 h-2 rounded-full
+                  bg-[color:var(--color-accent)]
+                  ring-2 ring-[color:var(--color-surface)]
+                "
+              />
+            )}
+          </div>
 
           {/* Theme toggle */}
           <IconButton

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { getBottomIndex, maybeRebalance } from "../utils/rebalance.js";
 import { Task } from "../models/Task.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
+import { logActivity } from "../services/activityService.js";
 
 export function validateId(req, res, next) {
   if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
@@ -21,6 +22,10 @@ export const createTask = asyncHandler(async (req, res) => {
   const orderIndex = last ? last.orderIndex + 1000 : 1000;
 
   const task = await Task.create({ title, description, priority, columnId, orderIndex, tags });
+
+  // Log AFTER create succeeds — a logging error must not roll back the task.
+  await logActivity({ action: "created", task });
+
   res.status(201).json({ task });
 });
 
@@ -37,12 +42,18 @@ export const updateTask = asyncHandler(async (req, res) => {
   task.version += 1;
   await task.save();
 
+  await logActivity({ action: "updated", task });
+
   res.json({ task });
 });
 
 export const deleteTask = asyncHandler(async (req, res) => {
+  // Read before deleting so we have the title for the activity message.
   const task = await Task.findByIdAndDelete(req.params.id).lean();
   if (!task) return res.status(404).json({ error: "Task not found." });
+
+  await logActivity({ action: "deleted", task });
+
   res.status(204).end();
 });
 
@@ -50,6 +61,14 @@ export const deleteTask = asyncHandler(async (req, res) => {
 export const moveTask = asyncHandler(async (req, res) => {
   const { columnId, orderIndex, version } = req.body;
   const { id } = req.params;
+
+  // Read the old column BEFORE the update so we can decide "moved" vs "reordered".
+  // We only need columnId from the existing doc; use lean() to avoid fetching all fields.
+  const existing = await Task.findById(id).select("columnId").lean();
+  if (!existing) {
+    return res.status(404).json({ error: "Task not found." });
+  }
+  const fromColumn = existing.columnId;
 
   // Atomic optimistic concurrency check
   const updated = await Task.findOneAndUpdate(
@@ -59,16 +78,23 @@ export const moveTask = asyncHandler(async (req, res) => {
   );
 
   if (!updated) {
-    const exists = await Task.findById(id).lean();
-    if (!exists) {
-      return res.status(404).json({ error: "Task not found." });
-    }
+    // version mismatch — task exists but was modified concurrently
+    const current = await Task.findById(id).lean();
     return res.status(409).json({
       code: "STALE_VERSION",
       error: "Task was modified by another request. Refresh and retry.",
-      task: exists,
+      task: current,
     });
   }
+
+  // Same column = reorder; different column = move.
+  const isSameColumn = fromColumn === columnId;
+  await logActivity({
+    action:     isSameColumn ? "reordered" : "moved",
+    task:       updated,
+    fromColumn: fromColumn,
+    toColumn:   columnId,
+  });
 
   const rebalanceResult = await maybeRebalance(columnId);
   res.json({ task: updated, ...rebalanceResult });

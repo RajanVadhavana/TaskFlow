@@ -18,10 +18,12 @@ import TaskModal from "./TaskModal.jsx";
  * - Quick-add input at the bottom (Enter to create).
  *
  * Props:
- *   id    : string ("todo" | "in-progress" | "done")
- *   tasks : Task[] (sorted by orderIndex)
+ *   id         : string ("todo" | "in-progress" | "done")
+ *   tasks      : Task[] (sorted by orderIndex)
+ *   onMutation : () => void  – called after any create/move/delete so
+ *                              BoardPage can update the activity unread dot
  */
-export default function KanbanColumn({ id, tasks }) {
+export default function KanbanColumn({ id, tasks, onMutation }) {
   // Narrow selector so column component only re-renders when relevant
   const createTask = useBoardStore((s) => s.createTask);
   const [quickTitle, setQuickTitle] = useState("");
@@ -40,6 +42,7 @@ export default function KanbanColumn({ id, tasks }) {
     try {
       await createTask({ title, columnId: id, priority: "Medium" });
       setQuickTitle("");
+      onMutation?.();
     } finally {
       setAdding(false);
     }
@@ -88,7 +91,7 @@ export default function KanbanColumn({ id, tasks }) {
         >
           <SortableContext items={taskIds} strategy={verticalListSortingStrategy}>
             {tasks.map((task) => (
-              <TaskCard key={task._id} task={task} columnTasks={tasks} />
+              <TaskCard key={task._id} task={task} columnTasks={tasks} onMutation={onMutation} />
             ))}
           </SortableContext>
 
@@ -129,6 +132,7 @@ export default function KanbanColumn({ id, tasks }) {
         <TaskModal
           defaultColumnId={id}
           onClose={() => setShowModal(false)}
+          onSuccess={onMutation}
         />
       )}
     </>
