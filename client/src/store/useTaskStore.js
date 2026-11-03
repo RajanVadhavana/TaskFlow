@@ -2,11 +2,15 @@ import { create } from "zustand";
 import { taskApi } from "../api/client.js";
 import toast from "react-hot-toast";
 
+/**
+ * useTaskStore — single source of truth for all tasks in the UI.
+ */
 export const useTaskStore = create((set, get) => ({
   tasks: [],
   loading: false,
   error: null,
 
+  // Fetch
   fetchTasks: async () => {
     set({ loading: true, error: null });
     try {
@@ -18,6 +22,7 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
+  // Create
   createTask: async (payload) => {
     try {
       const { task } = await taskApi.create(payload);
@@ -30,6 +35,7 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
+  // Update
   updateTask: async (id, payload) => {
     const prev = get().tasks.find((t) => t._id === id);
     set((state) => ({
@@ -44,13 +50,16 @@ export const useTaskStore = create((set, get) => ({
       toast.success("Task updated");
     } catch (err) {
       if (prev) {
-        set((state) => ({ tasks: state.tasks.map((t) => (t._id === id ? prev : t)) }));
+        set((state) => ({
+          tasks: state.tasks.map((t) => (t._id === id ? prev : t)),
+        }));
       }
       toast.error(err.message || "Failed to update task");
       throw err;
     }
   },
 
+  // Delete
   deleteTask: async (id) => {
     const prev = get().tasks.find((t) => t._id === id);
     set((state) => ({ tasks: state.tasks.filter((t) => t._id !== id) }));
@@ -67,12 +76,15 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
+  // Move
   moveTask: async (id, { columnId, orderIndex }) => {
     const lastConfirmed = get().tasks.find((t) => t._id === id);
     if (!lastConfirmed) return;
 
     set((state) => ({
-      tasks: state.tasks.map((t) => (t._id === id ? { ...t, columnId, orderIndex } : t)),
+      tasks: state.tasks.map((t) =>
+        t._id === id ? { ...t, columnId, orderIndex } : t
+      ),
     }));
 
     try {
@@ -92,9 +104,11 @@ export const useTaskStore = create((set, get) => ({
     } catch (err) {
       if (err.code === "STALE_VERSION" && err.serverTask) {
         set((state) => ({
-          tasks: state.tasks.map((t) => (t._id === id ? err.serverTask : t)),
+          tasks: state.tasks.map((t) =>
+            t._id === id ? err.serverTask : t
+          ),
         }));
-        toast.error("Card was modified elsewhere - re-synced.");
+        toast.error("Card was updated elsewhere — refreshed to latest state.");
       } else {
         set((state) => ({
           tasks: state.tasks.map((t) => (t._id === id ? lastConfirmed : t)),
