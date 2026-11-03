@@ -138,3 +138,4 @@ Record human-readable activity strings (e.g. `Task 'Auth' moved from 'To Do' to 
 2. **Keyboard Traps & Focus Return**: Modals trap focus between interactive elements and return focus to the triggering element upon closure (`newTaskBtnRef`).
 3. **Screen Reader Live Announcements**: An ARIA live region (`aria-live="assertive"`) speaks drag-and-drop outcomes (e.g. `"Moved 'Task A' to In Progress"`).
 4. **Selective Re-renders**: `TaskCard` is wrapped in `React.memo` with narrow prop bindings so that dragging one card does not re-render unaffected cards in other columns.
+
