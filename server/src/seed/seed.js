@@ -23,6 +23,11 @@ const TASKS = [
   { title: "Add Zod validation middleware", description: ".strict() on update schema.", priority: "Medium", columnId: "done", tags: ["backend", "validation"] },
 ];
 
+// Helper: return a Date that is `minutes` minutes ago
+function minsAgo(minutes) {
+  return new Date(Date.now() - minutes * 60 * 1000);
+}
+
 async function seed() {
   const uri = process.env.MONGODB_URI;
   await mongoose.connect(uri);
@@ -35,13 +40,89 @@ async function seed() {
   });
 
   const inserted = await Task.insertMany(taskDocs);
-  const activities = inserted.map((task) => ({
-    action: "created",
-    taskId: task._id,
-    taskTitle: task.title,
-    message: `Created "${task.title}"`,
-    createdAt: new Date(),
-  }));
+
+  // Map task titles to their inserted IDs for reference in activity entries.
+  const byTitle = {};
+  inserted.forEach((t) => { byTitle[t.title] = t; });
+
+  // 8 curated sample activities with varied actions, columns, and staggered
+  // timestamps so the activity drawer shows realistic grouping (today/yesterday).
+  const activities = [
+    {
+      action: "created",
+      taskId:    byTitle["Scaffold MERN repo structure"]._id,
+      taskTitle: "Scaffold MERN repo structure",
+      toColumn:  "done",
+      message:   "Task 'Scaffold MERN repo structure' created by User",
+      actor:     "User",
+      createdAt: minsAgo(60 * 26), // ~26 hours ago → yesterday
+    },
+    {
+      action: "created",
+      taskId:    byTitle["Implement GET /api/tasks"]._id,
+      taskTitle: "Implement GET /api/tasks",
+      toColumn:  "todo",
+      message:   "Task 'Implement GET /api/tasks' created by User",
+      actor:     "User",
+      createdAt: minsAgo(60 * 25),
+    },
+    {
+      action: "moved",
+      taskId:    byTitle["Implement GET /api/tasks"]._id,
+      taskTitle: "Implement GET /api/tasks",
+      fromColumn: "todo",
+      toColumn:   "in-progress",
+      message:   "Task 'Implement GET /api/tasks' moved from 'To Do' to 'In Progress' by User",
+      actor:     "User",
+      createdAt: minsAgo(60 * 24),
+    },
+    {
+      action: "moved",
+      taskId:    byTitle["Implement GET /api/tasks"]._id,
+      taskTitle: "Implement GET /api/tasks",
+      fromColumn: "in-progress",
+      toColumn:   "done",
+      message:   "Task 'Implement GET /api/tasks' moved from 'In Progress' to 'Done' by User",
+      actor:     "User",
+      createdAt: minsAgo(60 * 20),
+    },
+    {
+      action: "created",
+      taskId:    byTitle["Implement drag-and-drop with @dnd-kit"]._id,
+      taskTitle: "Implement drag-and-drop with @dnd-kit",
+      toColumn:  "in-progress",
+      message:   "Task 'Implement drag-and-drop with @dnd-kit' created by User",
+      actor:     "User",
+      createdAt: minsAgo(60 * 4),
+    },
+    {
+      action: "updated",
+      taskId:    byTitle["Add rate limiting to the API"]._id,
+      taskTitle: "Add rate limiting to the API",
+      toColumn:  "todo",
+      message:   "Task 'Add rate limiting to the API' updated by User",
+      actor:     "User",
+      createdAt: minsAgo(60 * 2),
+    },
+    {
+      action: "reordered",
+      taskId:    byTitle["Write E2E tests for the board"]._id,
+      taskTitle: "Write E2E tests for the board",
+      toColumn:  "todo",
+      message:   "Task 'Write E2E tests for the board' reordered in 'To Do' by User",
+      actor:     "User",
+      createdAt: minsAgo(45),
+    },
+    {
+      action: "deleted",
+      taskId:    new mongoose.Types.ObjectId(), // task no longer exists
+      taskTitle: "Spike: evaluate WebSockets for live updates",
+      toColumn:  "todo",
+      message:   "Task 'Spike: evaluate WebSockets for live updates' deleted by User",
+      actor:     "User",
+      createdAt: minsAgo(10),
+    },
+  ];
 
   await Activity.insertMany(activities);
   console.log(`✅ Seeded ${inserted.length} tasks and ${activities.length} activities`);
