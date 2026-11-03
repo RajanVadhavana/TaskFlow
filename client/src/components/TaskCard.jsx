@@ -35,6 +35,9 @@ function KebabMenu({ task, columnTasks, onClose }) {
   // Other columns this card can move to
   const otherColumns = COLUMN_ORDER.filter((c) => c !== task.columnId);
 
+  // If this card is the last card in a column with multiple cards, open upward
+  const openUpward = myIndex > 0 && myIndex === columnTasks.length - 1;
+
   function doMoveUp() {
     // "Up" means targetIndex = myIndex - 1 in the list without this card
     const newOrderIndex = computeOrderIndex(tasksWithoutMe, myIndex - 1);
@@ -107,12 +110,12 @@ function KebabMenu({ task, columnTasks, onClose }) {
       ref={menuRef}
       role="menu"
       aria-label="Card actions"
-      className="
-        absolute right-0 top-7 z-50 min-w-[170px]
+      className={`
+        absolute right-0 ${openUpward ? "bottom-7" : "top-7"} z-50 min-w-[170px]
         bg-white dark:bg-slate-900
         border border-slate-200 dark:border-slate-700
-        rounded-xl shadow-lg py-1
-      "
+        rounded-xl shadow-xl py-1
+      `}
     >
       {/* Move within column */}
       <button
@@ -182,7 +185,11 @@ function TaskCard({ task, columnTasks = [], isDragOverlay = false }) {
 
   const dndStyle = isDragOverlay
     ? {}
-    : { transform: CSS.Transform.toString(transform), transition };
+    : {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        ...(showMenu ? { zIndex: 30 } : {}),
+      };
 
   // ── Delete ────────────────────────────────────────────────────────────────
   async function handleDelete() {
@@ -228,6 +235,7 @@ function TaskCard({ task, columnTasks = [], isDragOverlay = false }) {
           bg-white dark:bg-slate-900
           border border-slate-200 dark:border-slate-800
           rounded-xl shadow-sm transition-all duration-150
+          ${showMenu ? "z-30" : ""}
           ${stateClasses}
         `}
       >
@@ -245,8 +253,8 @@ function TaskCard({ task, columnTasks = [], isDragOverlay = false }) {
 
           <PriorityBadge priority={task.priority} />
 
-          {/* Action buttons — visible on hover / keyboard focus */}
-          <div className="ml-auto flex items-center gap-0.5 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+          {/* Action buttons — visible on hover / keyboard focus / when menu is open */}
+          <div className={`ml-auto flex items-center gap-0.5 ${showMenu ? "opacity-100" : "opacity-0 group-hover:opacity-100 focus-within:opacity-100"} transition-opacity`}>
             {/* Edit */}
             <button
               type="button"
@@ -270,7 +278,7 @@ function TaskCard({ task, columnTasks = [], isDragOverlay = false }) {
             </button>
 
             {/* Kebab menu trigger */}
-            <div className="relative">
+            <div className={`relative ${showMenu ? "z-40" : ""}`}>
               <button
                 type="button"
                 id={isDragOverlay ? undefined : `menu-task-${task._id}`}
