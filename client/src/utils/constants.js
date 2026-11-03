@@ -1,4 +1,5 @@
 // Column IDs and labels — mirrors server/src/shared/constants.js exactly.
+// Keep both files in sync manually (search-replace on rename).
 export const COLUMNS = {
   TODO: "todo",
   IN_PROGRESS: "in-progress",
@@ -11,9 +12,12 @@ export const COLUMN_LABELS = {
   [COLUMNS.DONE]: "Done",
 };
 
+// Ordered array drives the left-to-right column render.
 export const COLUMN_ORDER = [COLUMNS.TODO, COLUMNS.IN_PROGRESS, COLUMNS.DONE];
+
 export const PRIORITIES = ["Low", "Medium", "High"];
 
+// Colours used by the priority badge — chosen for WCAG AA contrast.
 export const PRIORITY_COLORS = {
   Low: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400",
   Medium: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400",

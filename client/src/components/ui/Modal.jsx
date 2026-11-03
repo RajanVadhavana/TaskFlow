@@ -1,10 +1,11 @@
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 
 /**
- * Simple overlay modal. Traps focus (ESC to close) for keyboard users.
+ * Simple overlay modal.  Traps focus (ESC to close) for keyboard users.
  */
 export default function Modal({ title, onClose, children }) {
+  // Close on Escape key — expected behaviour for modals (WCAG 2.1.2).
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") onClose();
@@ -14,10 +15,12 @@ export default function Modal({ title, onClose, children }) {
   }, [onClose]);
 
   return (
+    // Backdrop — clicking outside closes the modal.
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={onClose}
     >
+      {/* Stop click propagation so clicking inside doesn't close the modal. */}
       <div
         className="card w-full max-w-md p-6 flex flex-col gap-4 animate-in"
         onClick={(e) => e.stopPropagation()}

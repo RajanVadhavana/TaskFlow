@@ -4,13 +4,21 @@ import toast from "react-hot-toast";
 
 /**
  * useTaskStore — single source of truth for all tasks in the UI.
+ *
+ * State shape:
+ *   tasks        : Task[]   — flat array, sorted by columnId then orderIndex
+ *   loading      : boolean  — true during the initial fetch
+ *   error        : string | null
+ *
+ * The store never talks to the router or URL — it only owns task data.
  */
 export const useTaskStore = create((set, get) => ({
   tasks: [],
   loading: false,
   error: null,
 
-  // Fetch
+  // ── Fetch ──────────────────────────────────────────────────────────────────
+
   fetchTasks: async () => {
     set({ loading: true, error: null });
     try {
@@ -22,10 +30,12 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
-  // Create
+  // ── Create ─────────────────────────────────────────────────────────────────
+
   createTask: async (payload) => {
     try {
       const { task } = await taskApi.create(payload);
+      // Append to the end — the server sets the correct orderIndex.
       set((state) => ({ tasks: [...state.tasks, task] }));
       toast.success("Task created");
       return task;
@@ -35,8 +45,10 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
-  // Update
+  // ── Update ─────────────────────────────────────────────────────────────────
+
   updateTask: async (id, payload) => {
+    // Optimistic update: swap in the new fields immediately.
     const prev = get().tasks.find((t) => t._id === id);
     set((state) => ({
       tasks: state.tasks.map((t) => (t._id === id ? { ...t, ...payload } : t)),
@@ -44,11 +56,13 @@ export const useTaskStore = create((set, get) => ({
 
     try {
       const { task } = await taskApi.update(id, payload);
+      // Replace with the server's authoritative version (e.g. updated version field).
       set((state) => ({
         tasks: state.tasks.map((t) => (t._id === id ? task : t)),
       }));
       toast.success("Task updated");
     } catch (err) {
+      // Roll back to the state before the optimistic update.
       if (prev) {
         set((state) => ({
           tasks: state.tasks.map((t) => (t._id === id ? prev : t)),
@@ -59,8 +73,10 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
-  // Delete
+  // ── Delete ─────────────────────────────────────────────────────────────────
+
   deleteTask: async (id) => {
+    // Optimistic remove.
     const prev = get().tasks.find((t) => t._id === id);
     set((state) => ({ tasks: state.tasks.filter((t) => t._id !== id) }));
 
@@ -68,6 +84,7 @@ export const useTaskStore = create((set, get) => ({
       await taskApi.remove(id);
       toast.success("Task deleted");
     } catch (err) {
+      // Restore the task if the delete failed.
       if (prev) {
         set((state) => ({ tasks: [...state.tasks, prev] }));
       }
@@ -76,11 +93,14 @@ export const useTaskStore = create((set, get) => ({
     }
   },
 
-  // Move
+  // ── Move ───────────────────────────────────────────────────────────────────
+
   moveTask: async (id, { columnId, orderIndex }) => {
+    // Snapshot the task before changing it — needed for rollback.
     const lastConfirmed = get().tasks.find((t) => t._id === id);
     if (!lastConfirmed) return;
 
+    // Optimistic update: move the card in the UI immediately.
     set((state) => ({
       tasks: state.tasks.map((t) =>
         t._id === id ? { ...t, columnId, orderIndex } : t
@@ -88,21 +108,19 @@ export const useTaskStore = create((set, get) => ({
     }));
 
     try {
-      const res = await taskApi.move(id, {
+      const { task } = await taskApi.move(id, {
         columnId,
         orderIndex,
-        version: lastConfirmed.version,
+        version: lastConfirmed.version, // tell the server what version we had
       });
 
-      if (res.rebalanced) {
-        get().fetchTasks();
-      } else {
-        set((state) => ({
-          tasks: state.tasks.map((t) => (t._id === id ? res.task : t)),
-        }));
-      }
+      // Replace with the server's authoritative version (version bumped, etc.)
+      set((state) => ({
+        tasks: state.tasks.map((t) => (t._id === id ? task : t)),
+      }));
     } catch (err) {
       if (err.code === "STALE_VERSION" && err.serverTask) {
+        // Another request won — reconcile with the server's latest state.
         set((state) => ({
           tasks: state.tasks.map((t) =>
             t._id === id ? err.serverTask : t
@@ -110,6 +128,7 @@ export const useTaskStore = create((set, get) => ({
         }));
         toast.error("Card was updated elsewhere — refreshed to latest state.");
       } else {
+        // Unknown error — roll back to the snapshot.
         set((state) => ({
           tasks: state.tasks.map((t) => (t._id === id ? lastConfirmed : t)),
         }));

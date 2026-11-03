@@ -2,22 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Base layer — global tokens */
+/* ── Base layer — global tokens ─────────────────────────────────────────── */
 @layer base {
   :root {
     color-scheme: light dark;
   }
 
   html {
+    /* Smooth scrolling for any anchor navigation */
     scroll-behavior: smooth;
   }
 
   body {
     @apply bg-slate-50 text-slate-900 font-sans antialiased;
     @apply dark:bg-slate-950 dark:text-slate-100;
+    /* Prevent layout shift when a modal opens and adds a scrollbar */
     scrollbar-gutter: stable;
   }
 
+  /* Custom scrollbar — subtle and consistent across light/dark */
   ::-webkit-scrollbar {
     @apply w-1.5;
   }
@@ -29,8 +32,9 @@
   }
 }
 
-/* Component layer — reusable class shortcuts */
+/* ── Component layer — reusable class shortcuts ──────────────────────────── */
 @layer components {
+  /* Card surface used by every task card and panel */
   .card {
     @apply bg-white border border-slate-200 rounded-xl shadow-card;
     @apply dark:bg-slate-900 dark:border-slate-800;
@@ -41,6 +45,7 @@
     @apply shadow-card-hover;
   }
 
+  /* Primary action button */
   .btn-primary {
     @apply inline-flex items-center gap-2 px-4 py-2 rounded-lg font-medium text-sm;
     @apply bg-indigo-600 text-white hover:bg-indigo-700 active:bg-indigo-800;
@@ -49,6 +54,7 @@
     @apply dark:focus-visible:ring-offset-slate-950;
   }
 
+  /* Ghost button — secondary actions */
   .btn-ghost {
     @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-lg font-medium text-sm;
     @apply text-slate-600 hover:bg-slate-100 active:bg-slate-200;
@@ -57,6 +63,7 @@
     @apply focus-visible:ring-2 focus-visible:ring-indigo-500;
   }
 
+  /* Text input */
   .input {
     @apply w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white;
     @apply placeholder:text-slate-400 dark:bg-slate-900 dark:border-slate-700;
@@ -65,6 +72,7 @@
     @apply transition-shadow duration-150;
   }
 
+  /* Column drop zone */
   .column {
     @apply flex flex-col gap-2 p-3 rounded-2xl min-h-[200px];
     @apply bg-slate-100 dark:bg-slate-900/60;

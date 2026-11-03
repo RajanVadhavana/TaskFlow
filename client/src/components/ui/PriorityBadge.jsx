@@ -1,15 +1,13 @@
 import { PRIORITY_COLORS } from "../../utils/constants.js";
 
 /**
- * Pill badge displaying Low / Medium / High priority.
- * Colors chosen to meet WCAG AA contrast against their backgrounds.
+ * Tiny coloured pill that shows a task's priority level.
+ * Colours are defined in constants.js for WCAG AA compliance.
  */
 export default function PriorityBadge({ priority }) {
-  const color = PRIORITY_COLORS[priority] || PRIORITY_COLORS.Medium;
-
   return (
     <span
-      className={`inline-flex items-center text-xs font-medium px-2 py-0.5 rounded-md ${color}`}
+      className={`inline-block px-2 py-0.5 rounded-md text-xs font-medium ${PRIORITY_COLORS[priority]}`}
     >
       {priority}
     </span>

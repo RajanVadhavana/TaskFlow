@@ -1,18 +1,22 @@
 import { Sun, Moon, Plus, Kanban } from "lucide-react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 
+/**
+ * Top navigation bar.
+ * Theme toggle works by adding/removing the "dark" class on <html>.
+ * We read the initial state from the class that was set in index.html.
+ */
 export default function Navbar({ onNewTask }) {
   const [dark, setDark] = useState(
     () => document.documentElement.classList.contains("dark")
   );
 
   useEffect(() => {
+    // Sync the <html> class when the local state changes.
     if (dark) {
       document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
     } else {
       document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
     }
   }, [dark]);
 

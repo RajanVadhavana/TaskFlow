@@ -1,8 +1,12 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useTaskStore } from "../store/useTaskStore.js";
 import { COLUMNS, COLUMN_ORDER, COLUMN_LABELS, PRIORITIES } from "../utils/constants.js";
 import Modal from "./ui/Modal.jsx";
 
+/**
+ * Form for creating a new task.  Controlled inputs, no external form library
+ * so every line is easy to explain in the defense.
+ */
 export default function CreateTaskModal({ onClose }) {
   const { createTask } = useTaskStore();
 
@@ -20,16 +24,19 @@ export default function CreateTaskModal({ onClose }) {
   function handleChange(e) {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    if (name === "title") setTitleError("");
+    if (name === "title") setTitleError(""); // clear error on change
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
+
+    // Client-side guard — server will also validate, but this gives instant feedback.
     if (!form.title.trim()) {
       setTitleError("Title is required");
       return;
     }
 
+    // Convert the comma-separated tags string to an array.
     const tags = form.tags
       .split(",")
       .map((t) => t.trim())
@@ -40,7 +47,7 @@ export default function CreateTaskModal({ onClose }) {
       await createTask({ ...form, tags });
       onClose();
     } catch {
-      // toast shown in store
+      // toast is already shown by the store
     } finally {
       setSubmitting(false);
     }
@@ -49,6 +56,7 @@ export default function CreateTaskModal({ onClose }) {
   return (
     <Modal title="New Task" onClose={onClose}>
       <form id="create-task-form" onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* Title */}
         <div className="flex flex-col gap-1">
           <label htmlFor="create-title" className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Title <span className="text-rose-500">*</span>
@@ -68,6 +76,7 @@ export default function CreateTaskModal({ onClose }) {
           )}
         </div>
 
+        {/* Description */}
         <div className="flex flex-col gap-1">
           <label htmlFor="create-description" className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Description
@@ -84,6 +93,7 @@ export default function CreateTaskModal({ onClose }) {
           />
         </div>
 
+        {/* Priority + Column row */}
         <div className="grid grid-cols-2 gap-3">
           <div className="flex flex-col gap-1">
             <label htmlFor="create-priority" className="text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -120,6 +130,7 @@ export default function CreateTaskModal({ onClose }) {
           </div>
         </div>
 
+        {/* Tags */}
         <div className="flex flex-col gap-1">
           <label htmlFor="create-tags" className="text-sm font-medium text-slate-700 dark:text-slate-300">
             Tags <span className="text-slate-400 font-normal">(comma-separated)</span>
@@ -134,6 +145,7 @@ export default function CreateTaskModal({ onClose }) {
           />
         </div>
 
+        {/* Actions */}
         <div className="flex justify-end gap-2 pt-1">
           <button id="create-cancel-btn" type="button" className="btn-ghost" onClick={onClose}>
             Cancel
