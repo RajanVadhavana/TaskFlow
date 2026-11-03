@@ -8,8 +8,8 @@ import React from "react";
  *   size    : "sm" | "md" | "lg"                            (default "md")
  *   All other props (onClick, disabled, type, etc.) are spread onto <button>.
  *
- * Rationale: one component instead of four CSS classes keeps the surface small
- * and makes the API easy to explain during a code review.
+ * Uses React.forwardRef so ConfirmDialog can programmatically focus the
+ * Cancel button via a ref (important for keyboard UX).
  */
 
 const BASE =
@@ -44,21 +44,19 @@ const SIZES = {
   lg: "text-base px-5 py-2.5",
 };
 
-export default function Button({
-  variant = "primary",
-  size = "md",
-  className = "",
-  children,
-  ...props
-}) {
+const Button = React.forwardRef(function Button(
+  { variant = "primary", size = "md", className = "", children, ...props },
+  ref
+) {
   const classes = [BASE, VARIANTS[variant], SIZES[size], className]
     .filter(Boolean)
     .join(" ");
 
   return (
-    <button className={classes} {...props}>
+    <button ref={ref} className={classes} {...props}>
       {children}
     </button>
   );
-}
+});
 
+export default Button;
