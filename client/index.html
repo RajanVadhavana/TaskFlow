@@ -5,23 +5,54 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TaskFlow</title>
+
+    <!-- Inter font — preconnect cuts DNS + TLS latency before the stylesheet -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&display=swap"
       rel="stylesheet"
     />
-    <!-- Prevent flash of unstyled theme on load -->
+
+    <!--
+      Zero-flicker theme script.
+      Runs BEFORE the React bundle so the very first paint already has the
+      correct theme class on <html>.  Without this, the browser renders one
+      frame in light mode before React mounts — the "flash of wrong theme".
+
+      We also add the "no-transitions" class so the first render never animates
+      colours.  useTheme.js removes it after mount.
+
+      The localStorage read is wrapped in try/catch because browsers can throw
+      SecurityError if cookies/storage are blocked (e.g. Safari private mode).
+    -->
     <script>
-      if (
-        localStorage.getItem("theme") === "dark" ||
-        (!("theme" in localStorage) &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches)
-      ) {
-        document.documentElement.classList.add("dark");
-      } else {
-        document.documentElement.classList.remove("dark");
-      }
+      (function () {
+        var stored;
+        try {
+          stored = localStorage.getItem("taskflow-theme");
+        } catch (_) {
+          stored = null;
+        }
+
+        var prefersDark =
+          window.matchMedia &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+
+        var dark = stored === "dark" || (stored === null && prefersDark);
+
+        if (dark) {
+          document.documentElement.classList.add("dark");
+          document.documentElement.style.colorScheme = "dark";
+        } else {
+          document.documentElement.classList.remove("dark");
+          document.documentElement.style.colorScheme = "light";
+        }
+
+        // Suppress colour transitions on the very first paint.
+        // useTheme.js removes this class after the app mounts.
+        document.documentElement.classList.add("no-transitions");
+      })();
     </script>
   </head>
   <body>
