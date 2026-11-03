@@ -9,14 +9,16 @@ import PriorityBadge from "./ui/PriorityBadge.jsx";
  * A single task card on the board.
  * - Supports drag-and-drop sorting via @dnd-kit/sortable.
  * - Drag handle on GripVertical keeps inline click-to-edit conflict-free.
+ * - When rendered inside <DragOverlay> pass isDragOverlay={true} so the
+ *   card skips the sortable hook entirely (avoids an extra droppable node).
  */
-export default function TaskCard({ task }) {
+export default function TaskCard({ task, isDragOverlay = false }) {
   const { updateTask, deleteTask } = useTaskStore();
   const [editing, setEditing] = useState(false);
   const [title, setTitle] = useState(task.title);
   const [deleting, setDeleting] = useState(false);
 
-  // @dnd-kit sortable hook
+  // @dnd-kit sortable hook — disabled when rendered as the drag overlay clone
   const {
     attributes,
     listeners,
@@ -24,12 +26,17 @@ export default function TaskCard({ task }) {
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: task._id });
+  } = useSortable({ id: task._id, disabled: isDragOverlay });
 
-  const style = {
-    transform: CSS.Translate.toString(transform),
-    transition,
-  };
+  const style = isDragOverlay
+    ? {} // overlay is positioned by DndContext itself
+    : {
+        // CSS.Transform (not Translate) keeps the ghost placeholder
+        // anchored in its original position while the overlay follows
+        // the pointer. Using Translate caused the ghost to jump/dance.
+        transform: CSS.Transform.toString(transform),
+        transition,
+      };
 
   async function handleTitleBlur() {
     const trimmed = title.trim();
@@ -54,12 +61,12 @@ export default function TaskCard({ task }) {
 
   return (
     <div
-      ref={setNodeRef}
+      ref={isDragOverlay ? undefined : setNodeRef}
       style={style}
-      id={`task-card-${task._id}`}
+      id={isDragOverlay ? undefined : `task-card-${task._id}`}
       className={`card p-3 flex flex-col gap-2 select-none group transition-shadow bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-sm ${
-        isDragging
-          ? "opacity-50 ring-2 ring-indigo-500 shadow-md z-10"
+        isDragging && !isDragOverlay
+          ? "opacity-40 ring-2 ring-indigo-400 shadow-md z-10"
           : "hover:border-slate-300 dark:hover:border-slate-700"
       }`}
     >
@@ -69,8 +76,7 @@ export default function TaskCard({ task }) {
           type="button"
           className="cursor-grab active:cursor-grabbing p-1 -m-1 rounded text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 focus:outline-none focus:ring-1 focus:ring-indigo-500"
           aria-label="Drag task handle"
-          {...attributes}
-          {...listeners}
+          {...(isDragOverlay ? {} : { ...attributes, ...listeners })}
         >
           <GripVertical size={14} className="shrink-0" aria-hidden="true" />
         </button>
@@ -78,7 +84,7 @@ export default function TaskCard({ task }) {
         <PriorityBadge priority={task.priority} />
 
         <button
-          id={`delete-task-${task._id}`}
+          id={isDragOverlay ? undefined : `delete-task-${task._id}`}
           onClick={handleDelete}
           disabled={deleting}
           className="ml-auto btn-ghost p-1 opacity-0 group-hover:opacity-100 transition-opacity text-slate-400 hover:text-rose-500"

@@ -5,8 +5,9 @@ import {
   KeyboardSensor,
   useSensor,
   useSensors,
-  closestCorners,
   DragOverlay,
+  pointerWithin,
+  rectIntersection,
 } from "@dnd-kit/core";
 import { sortableKeyboardCoordinates } from "@dnd-kit/sortable";
 import { useColumns } from "../hooks/useColumns.js";
@@ -19,6 +20,26 @@ import TaskCard from "../components/TaskCard.jsx";
 import CreateTaskModal from "../components/CreateTaskModal.jsx";
 
 /**
+ * Decide above-or-below by comparing the DragOverlay's translated center Y
+ * against the over-item's vertical midpoint.
+ *
+ * Using the OVERLAY rect (active.rect.current.translated) instead of raw
+ * pointer Y is critical: the grab offset shifts the pointer away from the
+ * card's visual center, so pointer-Y creates a mismatch between what the
+ * overlay shows and where the card actually lands. The overlay rect is what
+ * the user sees, so it must be the source of truth.
+ *
+ * Returns true  → insert BEFORE the over-item
+ * Returns false → insert AFTER  the over-item
+ */
+function shouldInsertBefore(activeRect, overRect) {
+  if (!activeRect || !overRect) return true;
+  const overlayCenterY = activeRect.top + activeRect.height / 2;
+  const overMidY = overRect.top + overRect.height / 2;
+  return overlayCenterY < overMidY;
+}
+
+/**
  * Main board page — wires up DndContext, Kanban columns, and the create modal.
  */
 export default function BoardPage() {
@@ -27,11 +48,11 @@ export default function BoardPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [activeTask, setActiveTask] = useState(null);
 
-  // Require moving 5px before activating drag so normal clicks aren't intercepted
+  // Require moving 8px before activating drag so normal clicks aren't intercepted
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 5,
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -39,12 +60,20 @@ export default function BoardPage() {
     })
   );
 
+  /**
+   * Custom collision detection: prefer pointerWithin so whichever card is
+   * literally under the cursor wins; fall back to rectIntersection for gaps.
+   */
+  function collisionDetection(args) {
+    const pointerCollisions = pointerWithin(args);
+    if (pointerCollisions.length > 0) return pointerCollisions;
+    return rectIntersection(args);
+  }
+
   function handleDragStart(event) {
     const { active } = event;
     const task = tasks.find((t) => t._id === active.id);
-    if (task) {
-      setActiveTask(task);
-    }
+    if (task) setActiveTask(task);
   }
 
   async function handleDragEnd(event) {
@@ -56,23 +85,30 @@ export default function BoardPage() {
     const activeId = active.id;
     const overId = over.id;
 
+    // ── Bug fix i): dropped on itself with no movement ──────────────────────
+    // When the card is released without moving, dnd-kit's pointerWithin
+    // resolves to the column background (the active card is excluded from its
+    // own collision zone) → targetIndex ends up at the column bottom.
+    // Guard: if active === over AND column hasn't changed, nothing to do.
+    if (activeId === overId) return;
+
     const currentTask = tasks.find((t) => t._id === activeId);
     if (!currentTask) return;
 
-    // 1. Determine destination column
+    // 1. Determine destination column and target index
     let targetColumnId;
     let targetIndex;
 
     const isOverColumn = COLUMN_ORDER.includes(overId);
 
     if (isOverColumn) {
-      // Dropped on the column background
+      // Dropped on the column background — place at bottom
       targetColumnId = overId;
       const targetColumnTasks = tasks
         .filter((t) => t.columnId === targetColumnId && t._id !== activeId)
         .sort((a, b) => a.orderIndex - b.orderIndex);
 
-      targetIndex = targetColumnTasks.length; // place at bottom
+      targetIndex = targetColumnTasks.length;
     } else {
       // Dropped onto another task card
       const overTask = tasks.find((t) => t._id === overId);
@@ -84,7 +120,19 @@ export default function BoardPage() {
         .sort((a, b) => a.orderIndex - b.orderIndex);
 
       const overIndex = targetColumnTasks.findIndex((t) => t._id === overId);
-      targetIndex = overIndex >= 0 ? overIndex : targetColumnTasks.length;
+      if (overIndex < 0) {
+        targetIndex = targetColumnTasks.length;
+      } else {
+        // ── Bug fix ii): use overlay center, not raw pointer ─────────────────
+        // active.rect.current.translated is the live rect of the DragOverlay —
+        // exactly what the user sees. Comparing ITS center to the over-item's
+        // midpoint makes the visual and the drop position 100% consistent,
+        // regardless of where on the card the user grabbed (top-left handle,
+        // middle, bottom, etc.).
+        const activeTranslated = active.rect.current.translated;
+        const insertBefore = shouldInsertBefore(activeTranslated, over.rect);
+        targetIndex = insertBefore ? overIndex : overIndex + 1;
+      }
     }
 
     // Filter tasks of the target column (excluding the active card)
@@ -95,7 +143,7 @@ export default function BoardPage() {
     // 2. Calculate fractional orderIndex
     const newOrderIndex = calculateNewOrderIndex(columnTasks, targetIndex);
 
-    // 3. Skip if nothing changed
+    // 3. Skip if nothing changed (same column, essentially same position)
     if (
       currentTask.columnId === targetColumnId &&
       Math.abs(currentTask.orderIndex - newOrderIndex) < 0.0001
@@ -148,7 +196,7 @@ export default function BoardPage() {
         {!loading && !error && (
           <DndContext
             sensors={sensors}
-            collisionDetection={closestCorners}
+            collisionDetection={collisionDetection}
             onDragStart={handleDragStart}
             onDragEnd={handleDragEnd}
           >
@@ -158,11 +206,19 @@ export default function BoardPage() {
               ))}
             </div>
 
-            {/* Drag overlay preview for smooth dragging visual */}
-            <DragOverlay>
+            {/* Drag overlay preview for smooth dragging visual.
+                NOTE: Do NOT apply scale or rotate transforms here.
+                DndKit tracks the overlay's logical DOM rect for collision
+                detection (active.rect.current.translated). If we visually
+                scale/rotate the overlay, its visual center drifts away from
+                the logical rect center, making shouldInsertBefore compare
+                the wrong Y position — causing the card to land one slot off
+                from where the overlay appears to be. Keep transforms
+                identity so visual and logical positions stay in sync. */}
+            <DragOverlay dropAnimation={null}>
               {activeTask ? (
-                <div className="rotate-2 scale-105 shadow-xl opacity-90 pointer-events-none">
-                  <TaskCard task={activeTask} />
+                <div className="shadow-xl opacity-90 pointer-events-none">
+                  <TaskCard task={activeTask} isDragOverlay />
                 </div>
               ) : null}
             </DragOverlay>
