@@ -14,7 +14,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { useColumns } from "../hooks/useColumns.js";
 import { useBoardStore, getAllTasks } from "../store/useBoardStore.js";
 import { COLUMN_ORDER } from "../utils/constants.js";
-import { calculateNewOrderIndex } from "../utils/order.js";
+import { computeOrderIndex } from "../utils/order.js";
 import Navbar from "../components/Navbar.jsx";
 import KanbanColumn from "../components/KanbanColumn.jsx";
 import TaskCard from "../components/TaskCard.jsx";
@@ -165,7 +165,7 @@ export default function BoardPage() {
       .filter((t) => t.columnId === targetColumnId && t._id !== activeId)
       .sort((a, b) => a.orderIndex - b.orderIndex);
 
-    const newOrderIndex = calculateNewOrderIndex(columnTasks, targetIndex);
+    const newOrderIndex = computeOrderIndex(columnTasks, targetIndex);
 
     if (
       currentTask.columnId === targetColumnId &&
@@ -174,10 +174,7 @@ export default function BoardPage() {
       return;
     }
 
-    await moveTask(activeId, {
-      columnId: targetColumnId,
-      orderIndex: newOrderIndex,
-    });
+    await moveTask(activeId, targetColumnId, newOrderIndex);
   }
 
   return (
