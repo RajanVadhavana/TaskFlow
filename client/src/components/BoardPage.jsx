@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -14,7 +14,7 @@ import { AlertCircle, RefreshCw } from "lucide-react";
 import { useColumns } from "../hooks/useColumns.js";
 import { useBoardStore, getAllTasks } from "../store/useBoardStore.js";
 import { useActivity } from "../hooks/useActivity.js";
-import { COLUMN_ORDER } from "../utils/constants.js";
+import { COLUMN_ORDER, COLUMN_LABELS } from "../utils/constants.js";
 import { computeOrderIndex } from "../utils/order.js";
 import Navbar from "../components/Navbar.jsx";
 import KanbanColumn from "../components/KanbanColumn.jsx";
@@ -36,26 +36,25 @@ function shouldInsertBefore(activeRect, overRect) {
 }
 
 /**
- * SkeletonBoard
- *
- * Rendered when tasks are loading. Mimics the 3-column Kanban layout
- * with pulsing skeleton placeholders.
+ * SkeletonBoard — shown while initial tasks fetch is in progress.
+ * Mirrors the 3-column layout with pulsing placeholders.
  */
 function SkeletonBoard() {
   return (
-    <div className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto snap-x snap-mandatory pb-4 md:pb-0">
+    <div
+      aria-label="Loading board"
+      aria-busy="true"
+      className="flex md:grid md:grid-cols-3 gap-4 overflow-x-auto snap-x snap-mandatory pb-4 md:pb-0"
+    >
       {[1, 2, 3].map((colIndex) => (
         <div
           key={colIndex}
           className="snap-center shrink-0 w-[85vw] md:w-auto bg-slate-100/70 dark:bg-slate-900/40 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800/80 flex flex-col gap-3 min-h-[360px]"
         >
-          {/* Header skeleton */}
           <div className="flex items-center justify-between px-1">
             <Skeleton className="h-4 w-24 rounded" />
             <Skeleton className="h-4 w-6 rounded-full" />
           </div>
-
-          {/* Card skeletons */}
           <div className="flex flex-col gap-2.5 mt-1">
             <div className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col gap-2">
               <Skeleton className="h-3.5 w-16 rounded" />
@@ -86,6 +85,7 @@ function SkeletonBoard() {
  * - Skeleton loading state and error banner with retry
  * - Drag and Drop wired via @dnd-kit
  * - Activity drawer wired to Bell button in Navbar
+ * - ARIA live region announces card moves to screen readers
  */
 export default function BoardPage() {
   const { columns, loading, error, refetch } = useColumns();
@@ -94,6 +94,11 @@ export default function BoardPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [activeTask, setActiveTask] = useState(null);
+
+  // Live region message announced to screen readers after drag-drop moves.
+  const [announcement, setAnnouncement] = useState("");
+  // Ref to the "New Task" button so focus can return to it after closing the modal.
+  const newTaskBtnRef = useRef(null);
 
   // ── Activity drawer state ─────────────────────────────────────────────────
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -109,8 +114,6 @@ export default function BoardPage() {
     notifyUnread,
   } = useActivity();
 
-  // Called when the Bell button is clicked: open drawer, clear unread dot,
-  // and re-fetch so the list is always fresh on open.
   const handleOpenActivity = useCallback(() => {
     setDrawerOpen(true);
     markSeen();
@@ -119,9 +122,7 @@ export default function BoardPage() {
 
   /**
    * afterMutation — called after every successful create/update/delete/move.
-   *
-   * If the drawer is open: refetch the activity list so the new entry appears.
-   * If the drawer is closed: light up the unread dot on the Bell button.
+   * Refreshes the activity feed or lights up the unread dot.
    */
   const afterMutation = useCallback(() => {
     if (drawerOpen) {
@@ -132,16 +133,10 @@ export default function BoardPage() {
   }, [drawerOpen, fetchActivity, notifyUnread]);
 
   // ── DnD kit sensors ───────────────────────────────────────────────────────
-  // Require moving 8px before activating drag so normal clicks aren't intercepted
+  // Require moving 8px before activating drag so normal clicks aren't intercepted.
   const sensors = useSensors(
-    useSensor(PointerSensor, {
-      activationConstraint: {
-        distance: 8,
-      },
-    }),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    })
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
   function collisionDetection(args) {
@@ -151,20 +146,17 @@ export default function BoardPage() {
   }
 
   function handleDragStart(event) {
-    const { active } = event;
-    const task = tasks.find((t) => t._id === active.id);
+    const task = tasks.find((t) => t._id === event.active.id);
     if (task) setActiveTask(task);
   }
 
   async function handleDragEnd(event) {
     const { active, over } = event;
     setActiveTask(null);
-
     if (!over) return;
 
     const activeId = active.id;
     const overId = over.id;
-
     if (activeId === overId) return;
 
     const currentTask = tasks.find((t) => t._id === activeId);
@@ -172,7 +164,6 @@ export default function BoardPage() {
 
     let targetColumnId;
     let targetIndex;
-
     const isOverColumn = COLUMN_ORDER.includes(overId);
 
     if (isOverColumn) {
@@ -180,23 +171,19 @@ export default function BoardPage() {
       const targetColumnTasks = tasks
         .filter((t) => t.columnId === targetColumnId && t._id !== activeId)
         .sort((a, b) => a.orderIndex - b.orderIndex);
-
       targetIndex = targetColumnTasks.length;
     } else {
       const overTask = tasks.find((t) => t._id === overId);
       if (!overTask) return;
-
       targetColumnId = overTask.columnId;
       const targetColumnTasks = tasks
         .filter((t) => t.columnId === targetColumnId && t._id !== activeId)
         .sort((a, b) => a.orderIndex - b.orderIndex);
-
       const overIndex = targetColumnTasks.findIndex((t) => t._id === overId);
       if (overIndex < 0) {
         targetIndex = targetColumnTasks.length;
       } else {
-        const activeTranslated = active.rect.current.translated;
-        const insertBefore = shouldInsertBefore(activeTranslated, over.rect);
+        const insertBefore = shouldInsertBefore(active.rect.current.translated, over.rect);
         targetIndex = insertBefore ? overIndex : overIndex + 1;
       }
     }
@@ -214,36 +201,57 @@ export default function BoardPage() {
       return;
     }
 
+    // Announce the move to screen readers via the ARIA live region.
+    const toLabel = COLUMN_LABELS[targetColumnId] ?? targetColumnId;
+    setAnnouncement(`Moved "${currentTask.title}" to ${toLabel}`);
+    // Clear after a moment so the same message can be re-announced if needed.
+    setTimeout(() => setAnnouncement(""), 2000);
+
     await moveTask(activeId, targetColumnId, newOrderIndex);
     afterMutation();
   }
 
   return (
     <div className="min-h-screen flex flex-col bg-[color:var(--color-bg)]">
+      {/*
+        ARIA live region — hidden visually but read aloud by screen readers
+        after every drag-drop card move. aria-live="assertive" interrupts
+        the reader immediately (appropriate since the user just performed an action).
+      */}
+      <div
+        aria-live="assertive"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {announcement}
+      </div>
+
       <Navbar
         onNewTask={() => setShowCreate(true)}
+        newTaskBtnRef={newTaskBtnRef}
         onActivity={handleOpenActivity}
         hasUnread={hasUnread}
       />
 
       <main className="flex-1 max-w-6xl mx-auto w-full px-4 py-6">
         {/* Title row */}
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
-              Board
-            </h1>
-            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-              Drag cards between columns to update their status.
-            </p>
-          </div>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            Board
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            Drag cards between columns to update their status.
+          </p>
         </div>
 
         {/* Error banner with Retry */}
         {error && !loading && (
-          <div className="mb-6 p-4 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+          <div
+            role="alert"
+            className="mb-6 p-4 rounded-xl border border-rose-200 dark:border-rose-900/50 bg-rose-50/70 dark:bg-rose-950/20 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+          >
             <div className="flex items-center gap-3 text-rose-700 dark:text-rose-400">
-              <AlertCircle size={20} className="shrink-0" />
+              <AlertCircle size={20} className="shrink-0" aria-hidden />
               <div>
                 <p className="text-sm font-medium">Failed to load tasks</p>
                 <p className="text-xs text-rose-600 dark:text-rose-500 mt-0.5">{error}</p>
@@ -255,7 +263,7 @@ export default function BoardPage() {
               onClick={refetch}
               className="shrink-0 text-xs"
             >
-              <RefreshCw size={13} className="mr-1.5" />
+              <RefreshCw size={13} className="mr-1.5" aria-hidden />
               Retry
             </Button>
           </div>
@@ -264,7 +272,7 @@ export default function BoardPage() {
         {/* Skeleton loading state */}
         {loading && <SkeletonBoard />}
 
-        {/* Kanban Board columns with DndContext */}
+        {/* Kanban Board with DnD */}
         {!loading && !error && (
           <DndContext
             sensors={sensors}
@@ -285,7 +293,7 @@ export default function BoardPage() {
               ))}
             </div>
 
-            {/* Drag overlay preview: no rotate or scale transform to prevent visual mismatch */}
+            {/* Drag overlay: no transforms to prevent visual mismatch */}
             <DragOverlay dropAnimation={null}>
               {activeTask ? (
                 <div className="shadow-xl opacity-90 pointer-events-none">
@@ -297,15 +305,19 @@ export default function BoardPage() {
         )}
       </main>
 
-      {/* Task modal for creation from navbar */}
+      {/* Task modal for creation — returns focus to New Task button on close */}
       {showCreate && (
         <TaskModal
-          onClose={() => setShowCreate(false)}
+          onClose={() => {
+            setShowCreate(false);
+            // Return focus to the button that opened the modal (WCAG 2.4.3)
+            setTimeout(() => newTaskBtnRef.current?.focus(), 0);
+          }}
           onSuccess={afterMutation}
         />
       )}
 
-      {/* Activity drawer — portal rendered, always mounted for animation */}
+      {/* Activity drawer — portal rendered, always mounted for slide animation */}
       <ActivityDrawer
         open={drawerOpen}
         onClose={() => setDrawerOpen(false)}

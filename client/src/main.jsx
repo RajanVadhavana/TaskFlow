@@ -2,11 +2,18 @@ import React from "react";
 import ReactDOM from "react-dom/client";
 import { Toaster } from "react-hot-toast";
 import App from "./App.jsx";
+import ErrorBoundary from "./components/ErrorBoundary.jsx";
 import "./index.css";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    {/*
+      ErrorBoundary wraps everything so any unhandled render error shows
+      a recovery screen instead of a blank white page.
+    */}
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
 
     {/*
       Toaster lives outside <App> so it's never unmounted when routes change.
@@ -24,7 +31,6 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           "!border !border-[color:var(--color-border)]",
         ].join(" "),
         duration: 3500,
-        // Success and error icons inherit from the token palette automatically.
         success: {
           iconTheme: { primary: "#4f46e5", secondary: "#fff" },
         },

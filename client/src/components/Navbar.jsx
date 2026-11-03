@@ -6,22 +6,23 @@ import Button from "./ui/Button.jsx";
 import DevToolsPopover from "./ui/DevToolsPopover.jsx";
 
 /**
- * Header / Navbar
+ * Navbar
  *
  * Sticky top bar with:
- *  - Logo mark + "TaskFlow" wordmark + subtitle
- *  - DevTools popover (Sliders icon) — chaos simulation toggles
- *  - Bell button that opens the Activity drawer.
- *    Shows a small indigo dot when hasUnread=true (new activity while closed).
- *  - Theme toggle (sun/moon) powered by useTheme
- *  - "New Task" primary action button
+ *  - Logo mark + "TaskFlow" wordmark
+ *  - DevTools chaos panel (Sliders icon)
+ *  - Bell button → Activity drawer; shows indigo unread dot when hasUnread=true
+ *  - Theme toggle
+ *  - "New Task" primary button
  *
  * Props:
- *   onNewTask  : () => void  – opens the create modal
- *   onActivity : () => void  – opens the activity drawer
- *   hasUnread  : boolean     – shows unread dot on Bell when true
+ *   onNewTask      : () => void
+ *   newTaskBtnRef  : React.Ref  – forwarded to the New Task button so the
+ *                                 modal can return focus to it on close (WCAG 2.4.3)
+ *   onActivity     : () => void
+ *   hasUnread      : boolean
  */
-export default function Navbar({ onNewTask, onActivity, hasUnread = false }) {
+export default function Navbar({ onNewTask, newTaskBtnRef, onActivity, hasUnread = false }) {
   const { isDark, toggle } = useTheme();
 
   return (
@@ -36,22 +37,16 @@ export default function Navbar({ onNewTask, onActivity, hasUnread = false }) {
 
         {/* ── Brand ──────────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-2.5 min-w-0">
-          {/* Logo mark: indigo kanban icon */}
           <div
-            className="
-              w-7 h-7 rounded-lg flex items-center justify-center
-              bg-[color:var(--color-accent)]
-            "
-            aria-hidden
+            className="w-7 h-7 rounded-lg flex items-center justify-center bg-[color:var(--color-accent)] shrink-0"
+            aria-hidden="true"
           >
             <Kanban size={15} className="text-white" />
           </div>
-
           <div className="flex flex-col leading-tight min-w-0">
             <span className="font-semibold text-sm text-[color:var(--color-text)] tracking-tight">
               TaskFlow
             </span>
-            {/* Subtitle hidden below 480px so the header fits on small screens */}
             <span className="hidden sm:block text-xs text-[color:var(--color-text-muted)]">
               Kanban board
             </span>
@@ -61,23 +56,17 @@ export default function Navbar({ onNewTask, onActivity, hasUnread = false }) {
         {/* ── Actions ────────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-1.5">
 
-          {/* Dev tools — simulation / chaos panel */}
           <DevToolsPopover />
 
-          {/* Activity Bell — dot indicates new activity while drawer was closed */}
+          {/* Activity Bell — unread dot indicates new activity while drawer was closed */}
           <div className="relative">
-            <IconButton
-              aria-label="View activity log"
-              onClick={onActivity}
-            >
+            <IconButton aria-label="View activity log" onClick={onActivity}>
               <Bell size={17} />
             </IconButton>
-
-            {/* Unread dot: small indigo circle, hidden when hasUnread is false.
-                Uses aria-hidden because the label on the button is sufficient. */}
+            {/* Dot: visually hidden from AT via aria-hidden; the button label covers it */}
             {hasUnread && (
               <span
-                aria-hidden
+                aria-hidden="true"
                 className="
                   absolute top-0.5 right-0.5
                   w-2 h-2 rounded-full
@@ -96,9 +85,14 @@ export default function Navbar({ onNewTask, onActivity, hasUnread = false }) {
             {isDark ? <Sun size={17} /> : <Moon size={17} />}
           </IconButton>
 
-          {/* New task */}
-          <Button variant="primary" size="sm" onClick={onNewTask}>
-            <Plus size={15} aria-hidden />
+          {/* New Task — ref forwarded so modal can return focus here on close */}
+          <Button
+            ref={newTaskBtnRef}
+            variant="primary"
+            size="sm"
+            onClick={onNewTask}
+          >
+            <Plus size={15} aria-hidden="true" />
             New Task
           </Button>
         </div>

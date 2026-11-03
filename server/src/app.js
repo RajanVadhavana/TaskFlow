@@ -3,6 +3,8 @@ import cors from "cors";
 import morgan from "morgan";
 import taskRoutes from "./routes/taskRoutes.js";
 import activityRoutes from "./routes/activityRoutes.js";
+import { notFound } from "./middleware/notFound.js";
+import { errorHandler } from "./middleware/errorHandler.js";
 
 const app = express();
 
@@ -15,7 +17,9 @@ app.use(
 
 app.use(express.json());
 
-if (process.env.NODE_ENV !== "test") {
+// Log requests in development only — morgan adds noise in production logs
+// and can expose internal path/query info to log aggregators unnecessarily.
+if (process.env.NODE_ENV !== "production") {
   app.use(morgan("dev"));
 }
 
@@ -23,7 +27,9 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// Chaos simulation middleware for DevTools — responds with 500 when client requests failure
+// Chaos simulation middleware for DevTools panel — responds with 500 when the
+// client sends X-Simulate-Failure so we can test optimistic-rollback behaviour
+// without actually failing the database operation.
 app.use((req, res, next) => {
   if (req.headers["x-simulate-failure"] === "true") {
     return res.status(500).json({
@@ -37,16 +43,10 @@ app.use((req, res, next) => {
 app.use("/api/tasks", taskRoutes);
 app.use("/api/activity", activityRoutes);
 
-// 404 catch-all — must come after all routes
-app.use((req, res) => {
-  res.status(404).json({ error: "Not found" });
-});
-
-// Global error handler — catches anything thrown by asyncHandler or next(err)
-// eslint-disable-next-line no-unused-vars
-app.use((err, req, res, next) => {
-  console.error("[server error]", err);
-  res.status(500).json({ error: "Unexpected server error" });
-});
+// 404 and global error handler must come after all routes.
+// Using the shared middleware so ValidationError, duplicate-key, etc.
+// all produce correct status codes in one place.
+app.use(notFound);
+app.use(errorHandler);
 
 export default app;
