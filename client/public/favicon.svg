@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <defs>
+    <!-- Brand Indigo-to-Slate Gradient -->
+    <linearGradient id="tf-bg" x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#312e81"/>
+    </linearGradient>
+
+    <!-- Subtle Glass Edge Highlight -->
+    <linearGradient id="tf-rim" x1="0" y1="0" x2="0" y2="32" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.25"/>
+      <stop offset="60%" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+
+    <!-- Column Subtle Highlight -->
+    <linearGradient id="tf-col" x1="16" y1="7" x2="16" y2="25" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e0e7ff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background squircle with subtle rim highlight -->
+  <rect width="32" height="32" rx="8" fill="url(#tf-bg)"/>
+  <rect x="0.5" y="0.5" width="31" height="31" rx="7.5" stroke="url(#tf-rim)" stroke-width="1"/>
+
+  <!-- Three Symmetrical Kanban Pillars (To Do, In Progress, Done) -->
+  <!-- Column 1: Full pillar -->
+  <rect x="6.5" y="7" width="4.75" height="18" rx="2.375" fill="url(#tf-col)"/>
+
+  <!-- Column 2: In-progress pillar -->
+  <rect x="13.625" y="7" width="4.75" height="11" rx="2.375" fill="#ffffff" fill-opacity="0.95"/>
+
+  <!-- Column 3: Review/Done pillar -->
+  <rect x="20.75" y="7" width="4.75" height="15" rx="2.375" fill="#ffffff" fill-opacity="0.75"/>
+</svg>
