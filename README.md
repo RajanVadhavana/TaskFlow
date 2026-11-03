@@ -216,3 +216,4 @@ See [`DECISIONS.md`](./DECISIONS.md) for a full breakdown. Highlights:
 - **`lastConfirmed` rollback anchor**: Each task stores the last server-confirmed `{ columnId, orderIndex, version }`. On failure, the UI snaps back to this snapshot.
 - **Epoch counter**: Incremented on rollback so still-queued continuations of a failed move skip execution rather than firing stale operations.
 - **`tasksById` map**: Tasks stored as `Record<id, Task>` in Zustand — structurally prevents duplicate cards because writing the same id overwrites the slot rather than pushing to an array.
+
