@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import morgan from "morgan";
+import taskRoutes from "./routes/taskRoutes.js";
 
 const app = express();
 
@@ -21,4 +22,5 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
+app.use("/api/tasks", taskRoutes);
 export default app;
