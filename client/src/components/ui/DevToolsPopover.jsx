@@ -155,22 +155,37 @@ export default function DevToolsPopover() {
 
           {/* Latency selector */}
           <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="devtools-latency"
-              className="text-sm text-[color:var(--color-text)]"
-            >
-              Latency
-            </label>
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="devtools-latency"
+                className="text-sm font-medium text-[color:var(--color-text)]"
+              >
+                Latency
+              </label>
+              {latency > 0 && (
+                <span className="text-[11px] font-mono font-medium px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                  +{latency}ms
+                </span>
+              )}
+            </div>
             <select
               id="devtools-latency"
               value={latency}
               onChange={changeLatency}
-              className="input text-sm py-1.5"
+              className="
+                w-full rounded-lg px-3 py-2 text-sm font-medium cursor-pointer
+                bg-[color:var(--color-surface)]
+                border border-[color:var(--color-border)]
+                text-[color:var(--color-text)]
+                hover:border-slate-400 dark:hover:border-slate-600
+                focus:outline-none focus:ring-2 focus:ring-[color:var(--color-accent)] focus:border-transparent
+                transition-colors duration-150
+              "
             >
-              <option value={0}>Off</option>
-              <option value={500}>500 ms</option>
-              <option value={1500}>1 500 ms</option>
-              <option value={3000}>3 000 ms</option>
+              <option value={0} className="bg-[color:var(--color-surface)] text-[color:var(--color-text)]">Off</option>
+              <option value={500} className="bg-[color:var(--color-surface)] text-[color:var(--color-text)]">500 ms</option>
+              <option value={1500} className="bg-[color:var(--color-surface)] text-[color:var(--color-text)]">1500 ms</option>
+              <option value={3000} className="bg-[color:var(--color-surface)] text-[color:var(--color-text)]">3000 ms</option>
             </select>
           </div>
 
